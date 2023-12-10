@@ -17,6 +17,7 @@ namespace Task4.Controllers
         private static List<Client> _clients = new List<Client>();
         private static string fullPath = Path.Combine("Files", "clients.csv");
         private List<Client> existingClients;
+        private BackupService _backupService;
 
         public MainController()
         {
@@ -34,6 +35,8 @@ namespace Task4.Controllers
             {
                 existingClients = new List<Client>();
             }
+            _backupService = new BackupService(existingClients, Path.Combine("Files", "backup.csv"));
+
         }
 
         [HttpPost("CreateClient")]
@@ -248,15 +251,18 @@ namespace Task4.Controllers
         // Save data to CSV file
         private void SaveDataToCsv()
         {
-            // Combine the existing clients with the new clients
-            var updatedClients = existingClients.Concat(_clients).ToList();
-
-            // Write the updated list back to the CSV file
-            using (var writer = new StreamWriter(fullPath))
-            using (var csv = new CsvWriter(writer, new CsvConfiguration(CultureInfo.InvariantCulture)))
+            lock (existingClients)
             {
-                csv.WriteRecords(updatedClients);
+                // Combine the existing clients with the new clients
+                var updatedClients = existingClients.Concat(_clients).ToList();
+
+                // Write the updated list back to the CSV file
+                using (var writer = new StreamWriter(fullPath))
+                using (var csv = new CsvWriter(writer, new CsvConfiguration(System.Globalization.CultureInfo.InvariantCulture)))
+                {
+                    csv.WriteRecords(updatedClients);
+                }
             }
         }
     }
-}
+    }
